@@ -1,0 +1,648 @@
+{
+  "code:short:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "general:short:simple:specific": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "general:short:simple:generic": [
+    {
+      "alpha": 3.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 3.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "code:short:compound:specific": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "math:short:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "factual:short:simple:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 3.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 8.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 8.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 5.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "creative:short:simple:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 8.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "factual:short:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "creative:short:compound:specific": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "code:short:simple:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 3.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 8.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 9.0,
+      "beta": 1.3
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.3
+    }
+  ],
+  "general:short:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "code:medium:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "code:medium:simple:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 7.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "math:short:simple:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 8.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 5.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "code:short:simple:specific": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "creative:short:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ],
+  "factual:medium:compound:generic": [
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 2.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 6.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    },
+    {
+      "alpha": 4.0,
+      "beta": 1.0
+    }
+  ]
+}
