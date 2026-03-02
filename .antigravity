@@ -1,0 +1,120 @@
+# Semantic Cache — Antigravity Project Context
+
+## Project Overview
+This is a **Semantic Caching system with Adaptive Threshold Selection for LLM Serving**.
+It uses adaptive semantic caching with quality-aware threshold selection (Thompson Sampling MAB)
+to reduce LLM inference costs by 40-60% while maintaining >95% response quality.
+
+## Tech Stack
+- **Language**: Python 3.10+
+- **API Framework**: FastAPI (uvicorn)
+- **Embeddings**: sentence-transformers (all-mpnet-base-v2, 768-dim)
+- **Vector Store**: Redis Stack (HNSW index with cosine similarity)
+- **LLM Providers**: Ollama (local, llama3.2:3b default), Groq (cloud)
+- **Dashboard**: Streamlit
+- **Metrics**: Prometheus
+- **Containerization**: Docker Compose (Redis Stack + Prometheus + Grafana)
+- **GPU**: CUDA-enabled PyTorch (cu126)
+
+## Architecture
+```
+User Query → FastAPI → MPNet Embedding → A/B Router
+                                          ├── Experiment (MAB adaptive threshold)
+                                          └── Control (static τ=0.85)
+                                                ↓
+                                    Redis HNSW Vector Search
+                                          ├── HIT → Quality Gate → Return cached / Treat as MISS
+                                          └── MISS → Circuit Breaker → Dedup → LLM API → Cache + Return
+                                                ↓
+                                    MAB Feedback Loop (sampled 10% via LLM-as-judge)
+```
+
+## Project Structure
+```
+semantic-cache/
+├── config.py                    # Centralized configuration (dataclasses)
+├── app/
+│   ├── main.py                  # FastAPI server + A/B testing + all API endpoints
+│   ├── embeddings.py            # MPNet embedding service
+│   ├── cache.py                 # Redis HNSW vector cache
+│   ├── mab.py                   # Enhanced Contextual MAB (Thompson Sampling)
+│   ├── mab_enhanced.py          # Enhanced MAB extensions
+│   ├── llm.py                   # Ollama/Groq LLM provider with fallback
+│   ├── quality.py               # Quality gate (heuristic + LLM-as-judge)
+│   ├── metrics.py               # Prometheus + A/B test metrics
+│   └── resilience.py            # Circuit breaker, request dedup, warmup
+├── evaluation/
+│   ├── benchmark.py             # Full benchmark suite (vs 8 methods)
+│   ├── baselines.py             # GPTCache, MeanCache, vLLM, SCALM, MinCache impls
+│   ├── dataset_loader.py        # Synthetic + ShareGPT + MS MARCO loaders
+│   ├── ablation.py              # Component ablation studies
+│   └── failure_modes.py         # Systematic failure analysis
+├── ui/
+│   └── app.py                   # Streamlit dashboard (5 tabs)
+├── monitoring/
+│   └── prometheus.yml
+├── docker-compose.yml
+└── requirements.txt
+```
+
+## Key Concepts
+- **MAB (Multi-Armed Bandit)**: Thompson Sampling selects optimal similarity thresholds
+  per context (domain × complexity × specificity × length). Arms range from 0.75 to 0.95.
+- **Domain Detection**: keyword-based classification into code, math, factual, creative, general.
+- **Quality Gate**: Two-tier — heuristic checks (intent, entities, negation) + sampled LLM-as-judge.
+- **Resilience**: Circuit breaker for LLM failures, request deduplication for thundering herd,
+  domain-aware TTL (factual=1h, code=7d, math=30d, creative=3d, general=1d).
+- **A/B Testing**: Split traffic between MAB (experiment) and static threshold (control).
+
+## API Endpoints
+| Endpoint               | Method | Purpose                        |
+|------------------------|--------|--------------------------------|
+| `/chat`                | POST   | Main query endpoint            |
+| `/stats`               | GET    | Comprehensive metrics          |
+| `/stats/mab`           | GET    | Full MAB state                 |
+| `/stats/mab/decisions` | GET    | Recent MAB decisions           |
+| `/stats/mab/learning`  | GET    | Threshold evolution curves     |
+| `/stats/mab/regret`    | GET    | Cumulative regret analysis     |
+| `/health`              | GET    | System health check            |
+| `/cache/flush`         | POST   | Reset cache + metrics          |
+| `/metrics`             | GET    | Prometheus-format metrics      |
+| `/feedback`            | POST   | User feedback signal           |
+
+## Running the Project
+```bash
+# Start Redis Stack
+docker run -d -p 6379:6379 redis/redis-stack-server:latest
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start API server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Start Streamlit dashboard
+streamlit run ui/app.py
+```
+
+## Evaluation Commands
+```bash
+# Full benchmark (vs 8 methods)
+python -m evaluation.benchmark --dataset synthetic --n 300
+
+# Ablation study
+python -m evaluation.ablation
+
+# Failure mode analysis
+python -m evaluation.failure_modes
+```
+
+## Configuration
+All configuration is centralized in `config.py` using Python dataclasses.
+Environment variables: `REDIS_HOST`, `REDIS_PORT`, `LLM_PROVIDER`, `OLLAMA_URL`,
+`OLLAMA_MODEL`, `GROQ_API_KEY`.
+
+## Style & Conventions
+- Use Python type hints and dataclasses for configuration.
+- Follow existing patterns: each module in `app/` is a self-contained service.
+- Metrics are Prometheus-compatible; every operation should be instrumented.
+- Error handling should use circuit breaker patterns (see `resilience.py`).
+- All thresholds and magic numbers belong in `config.py`, not scattered in code.
