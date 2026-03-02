@@ -53,6 +53,7 @@ class QualityChecker:
             confidence -= 0.6
             issues.append("negation_mismatch")
 
+        confidence = max(0.0, min(1.0, confidence))
         is_acceptable = confidence > 0.5
         reason = ", ".join(issues) if issues else "passed"
 

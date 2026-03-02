@@ -140,9 +140,8 @@ class RequestDeduplicator:
             future.set_exception(e)
             raise
         finally:
-            # Remove after a short window to catch near-simultaneous requests
-            await asyncio.sleep(self._window)
-            self._pending.pop(key, None)
+            # Remove after a short window — non-blocking so response isn't delayed
+            loop.call_later(self._window, self._pending.pop, key, None)
 
     def get_stats(self) -> dict:
         return {

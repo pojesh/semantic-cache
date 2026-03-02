@@ -3,7 +3,7 @@ Semantic Cache API Server (Enhanced).
 
 Core lifecycle:
 1. User sends query → /chat
-2. Embed query with MPNet
+2. Embed query with MPNet (async, non-blocking)
 3. A/B routing: MAB (experiment) vs static threshold (control)
 4. MAB selects similarity threshold based on rich context
 5. Search Redis HNSW for cached similar queries
@@ -11,7 +11,7 @@ Core lifecycle:
 7. If miss → circuit breaker check → LLM call (with dedup) → cache
 8. Sampled quality verification feeds back into MAB
 
-Production features: circuit breaker, request dedup, A/B testing.
+Production features: circuit breaker, request dedup, cache warming, A/B testing.
 """
 import asyncio
 import logging
@@ -32,7 +32,7 @@ from app.mab import ContextualMAB
 from app.llm import LLMProvider
 from app.quality import QualityChecker, build_judge_prompt
 from app.metrics import metrics
-from app.resilience import CircuitBreaker, RequestDeduplicator
+from app.resilience import CircuitBreaker, RequestDeduplicator, CacheWarmer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -45,11 +45,12 @@ llm: Optional[LLMProvider] = None
 quality_checker: Optional[QualityChecker] = None
 circuit_breaker: Optional[CircuitBreaker] = None
 deduplicator: Optional[RequestDeduplicator] = None
+cache_warmer: Optional[CacheWarmer] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global embedder, cache, mab, llm, quality_checker, circuit_breaker, deduplicator
+    global embedder, cache, mab, llm, quality_checker, circuit_breaker, deduplicator, cache_warmer
     logger.info("Initializing services...")
     embedder = EmbeddingService()
     cache = VectorCache()
@@ -58,8 +59,14 @@ async def lifespan(app: FastAPI):
     quality_checker = QualityChecker()
     circuit_breaker = CircuitBreaker()
     deduplicator = RequestDeduplicator()
+    cache_warmer = CacheWarmer()
     logger.info("All services initialized")
+
+    # Pre-populate cache with common queries if enabled
+    await cache_warmer.warmup(chat)
+
     yield
+    await llm.close()
     mab._save_state()
     logger.info("Shutting down...")
 
@@ -100,11 +107,6 @@ class ChatResponse(BaseModel):
     ab_group: Optional[str] = None  # "experiment" or "control"
 
 
-class FeedbackRequest(BaseModel):
-    query: str
-    was_helpful: bool
-
-
 # ─── A/B Test Routing ────────────────────────────────────────────────────
 
 def _select_ab_group() -> str:
@@ -123,21 +125,25 @@ async def chat(req: ChatRequest):
     if not query:
         raise HTTPException(status_code=400, detail="Empty query")
 
-    # Step 1: Embed the query
-    embedding = embedder.encode(query)
+    # Step 1: Embed the query (non-blocking)
+    embedding = await asyncio.to_thread(embedder.encode, query)
 
     # Step 2: A/B test routing
     ab_group = _select_ab_group()
 
-    # Step 3: Select threshold
+    # Step 3: Select threshold + extract full context for updates
     if ab_group == "experiment":
         threshold, arm_idx, domain, length_bin = mab.select_threshold(query, embedding)
+        query_ctx = mab.context_extractor.extract(query, embedding)
     else:
         threshold = config.ab_test.control_threshold
         arm_idx = -1
-        ctx = mab.context_extractor.extract(query, embedding)
-        domain = ctx["domain"]
-        length_bin = ctx["length_bin"]
+        query_ctx = mab.context_extractor.extract(query, embedding)
+        domain = query_ctx["domain"]
+        length_bin = query_ctx["length_bin"]
+
+    complexity = query_ctx["complexity"]
+    specificity = query_ctx["specificity"]
 
     # Step 4: Search cache (unless forced LLM)
     if not req.force_llm:
@@ -151,21 +157,23 @@ async def chat(req: ChatRequest):
 
             if is_ok:
                 latency_s = time.time() - start
-                estimated_tokens = len(query.split()) * 2 + 150
-                estimated_cost = (estimated_tokens / 1_000_000) * (
-                    config.llm.cost_per_1m_input_tokens + config.llm.cost_per_1m_output_tokens
-                )
 
-                metrics.record_cache_hit(latency_s, best.similarity, domain, threshold, estimated_cost, ab_group)
+                metrics.record_cache_hit(latency_s, best.similarity, domain, threshold, ab_group)
                 cache.increment_hit(best.cache_key)
 
                 if ab_group == "experiment":
-                    mab.update(domain, length_bin, arm_idx, "good_hit", similarity=best.similarity)
+                    mab.update(domain, length_bin, arm_idx, "good_hit",
+                               similarity=best.similarity,
+                               complexity=complexity, specificity=specificity)
 
                 # Sampled async quality verification
                 if random.random() < config.cache.quality_sample_rate:
                     asyncio.create_task(
-                        _async_quality_verify(query, best.query, best.response, domain, length_bin, arm_idx, ab_group)
+                        _async_quality_verify(
+                            query, best.query, best.response,
+                            domain, length_bin, arm_idx, ab_group,
+                            complexity, specificity,
+                        )
                     )
 
                 logger.info(
@@ -184,7 +192,9 @@ async def chat(req: ChatRequest):
             else:
                 logger.info(f"QUALITY GATE REJECTED | sim={best.similarity:.3f} reason={reason}")
                 if ab_group == "experiment":
-                    mab.update(domain, length_bin, arm_idx, "bad_hit", similarity=best.similarity)
+                    mab.update(domain, length_bin, arm_idx, "bad_hit",
+                               similarity=best.similarity,
+                               complexity=complexity, specificity=specificity)
                 metrics.record_false_positive(ab_group)
 
     # Step 6: Circuit breaker check
@@ -212,7 +222,8 @@ async def chat(req: ChatRequest):
 
     # Step 9: Update MAB
     if ab_group == "experiment":
-        mab.update(domain, length_bin, arm_idx, "miss")
+        mab.update(domain, length_bin, arm_idx, "miss",
+                   complexity=complexity, specificity=specificity)
 
     metrics.record_cache_miss(latency_s, llm_response.cost_usd, domain, threshold, ab_group)
 
@@ -231,7 +242,8 @@ async def chat(req: ChatRequest):
 
 
 async def _async_quality_verify(query, cached_query, cached_response,
-                                 domain, length_bin, arm_idx, ab_group):
+                                 domain, length_bin, arm_idx, ab_group,
+                                 complexity="simple", specificity="generic"):
     """Background quality verification using LLM-as-judge."""
     try:
         judge_prompt = build_judge_prompt(query, cached_query, cached_response)
@@ -240,20 +252,14 @@ async def _async_quality_verify(query, cached_query, cached_response,
         if "BAD" in verdict:
             logger.warning(f"QUALITY VERIFY: BAD — '{query[:50]}...'")
             if ab_group == "experiment" and arm_idx >= 0:
-                mab.update(domain, length_bin, arm_idx, "bad_hit")
+                mab.update(domain, length_bin, arm_idx, "bad_hit",
+                           complexity=complexity, specificity=specificity)
             metrics.record_false_positive(ab_group)
             metrics.record_quality_score(0.0)
         else:
             metrics.record_quality_score(1.0)
     except Exception as e:
         logger.warning(f"Quality verification failed: {e}")
-
-
-# ─── Feedback Endpoint ───────────────────────────────────────────────────
-
-@app.post("/feedback")
-async def feedback(req: FeedbackRequest):
-    return {"status": "recorded", "helpful": req.was_helpful}
 
 
 # ─── Monitoring Endpoints ────────────────────────────────────────────────

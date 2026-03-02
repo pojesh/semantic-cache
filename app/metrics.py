@@ -2,7 +2,7 @@
 Metrics: Prometheus-compatible + in-memory tracking with A/B test support.
 """
 import logging
-from collections import defaultdict
+from collections import defaultdict, deque
 from typing import Optional
 
 import numpy as np
@@ -25,17 +25,16 @@ class MetricsCollector:
         self._cache_misses = 0
         self._false_positives = 0
         self._total_queries = 0
-        self._total_cost_saved = 0.0
         self._total_cost_spent = 0.0
-        self._latencies_cache = []
-        self._latencies_llm = []
-        self._quality_scores = []
+        self._latencies_cache = deque(maxlen=10000)
+        self._latencies_llm = deque(maxlen=10000)
+        self._quality_scores = deque(maxlen=10000)
         self._threshold_selections = {}
         # A/B test tracking
         self._ab_groups = defaultdict(lambda: {
             "hits": 0, "misses": 0, "false_positives": 0,
-            "cost_saved": 0.0, "cost_spent": 0.0,
-            "latencies_cache": [], "latencies_llm": [],
+            "cost_spent": 0.0,
+            "latencies_cache": deque(maxlen=10000), "latencies_llm": deque(maxlen=10000),
         })
         # Per-domain tracking
         self._domain_stats = defaultdict(lambda: {
@@ -50,29 +49,25 @@ class MetricsCollector:
                 "query_latency_seconds", "Query latency",
                 buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0]
             )
-            self.prom_cost_saved = Counter("cost_saved_usd", "USD saved by cache")
             self.prom_cost_spent = Counter("cost_spent_usd", "USD spent on LLM")
             self.prom_hit_rate = Gauge("cache_hit_rate", "Current hit rate")
             self.prom_threshold = Gauge("selected_threshold", "Last threshold", ["domain"])
 
     def record_cache_hit(self, latency_s: float, similarity: float, domain: str,
-                         threshold: float, estimated_cost_saved: float, ab_group: str = "experiment"):
+                         threshold: float, ab_group: str = "experiment"):
         self._cache_hits += 1
         self._total_queries += 1
-        self._total_cost_saved += estimated_cost_saved
         self._latencies_cache.append(latency_s)
         self._threshold_selections[domain] = threshold
         self._domain_stats[domain]["hits"] += 1
         # A/B
         g = self._ab_groups[ab_group]
         g["hits"] += 1
-        g["cost_saved"] += estimated_cost_saved
         g["latencies_cache"].append(latency_s)
 
         if PROMETHEUS_AVAILABLE:
             self.prom_cache_hits.inc()
             self.prom_latency.observe(latency_s)
-            self.prom_cost_saved.inc(estimated_cost_saved)
             self.prom_hit_rate.set(self.hit_rate)
             self.prom_threshold.labels(domain=domain).set(threshold)
 
@@ -116,8 +111,9 @@ class MetricsCollector:
         return (self._cache_hits - self._false_positives) / self._cache_hits
 
     def get_summary(self) -> dict:
-        cache_lats = self._latencies_cache or [0]
-        llm_lats = self._latencies_llm or [0]
+        cache_lats = list(self._latencies_cache) or [0]
+        llm_lats = list(self._latencies_llm) or [0]
+        quality = list(self._quality_scores)
         return {
             "total_queries": self._total_queries,
             "cache_hits": self._cache_hits,
@@ -125,13 +121,12 @@ class MetricsCollector:
             "false_positives": self._false_positives,
             "hit_rate": round(self.hit_rate * 100, 2),
             "precision": round(self.precision * 100, 2),
-            "cost_saved_usd": round(self._total_cost_saved, 6),
             "cost_spent_usd": round(self._total_cost_spent, 6),
             "latency_cache_p50_ms": round(float(np.percentile(cache_lats, 50)) * 1000, 1),
             "latency_cache_p95_ms": round(float(np.percentile(cache_lats, 95)) * 1000, 1),
             "latency_llm_p50_ms": round(float(np.percentile(llm_lats, 50)) * 1000, 1),
             "latency_llm_p95_ms": round(float(np.percentile(llm_lats, 95)) * 1000, 1),
-            "avg_quality_score": round(float(np.mean(self._quality_scores)), 3) if self._quality_scores else None,
+            "avg_quality_score": round(float(np.mean(quality)), 3) if quality else None,
         }
 
     def get_ab_summary(self) -> dict:
@@ -141,13 +136,12 @@ class MetricsCollector:
             total = g["hits"] + g["misses"]
             hit_rate = g["hits"] / max(total, 1) * 100
             precision = (g["hits"] - g["false_positives"]) / max(g["hits"], 1) * 100
-            avg_cache_lat = float(np.mean(g["latencies_cache"])) * 1000 if g["latencies_cache"] else 0
-            avg_llm_lat = float(np.mean(g["latencies_llm"])) * 1000 if g["latencies_llm"] else 0
+            avg_cache_lat = float(np.mean(list(g["latencies_cache"]))) * 1000 if g["latencies_cache"] else 0
+            avg_llm_lat = float(np.mean(list(g["latencies_llm"]))) * 1000 if g["latencies_llm"] else 0
             result[group] = {
                 "total_queries": total,
                 "hit_rate_%": round(hit_rate, 1),
                 "precision_%": round(precision, 1),
-                "cost_saved_$": round(g["cost_saved"], 6),
                 "cost_spent_$": round(g["cost_spent"], 6),
                 "false_positives": g["false_positives"],
                 "avg_cache_latency_ms": round(avg_cache_lat, 1),
@@ -171,11 +165,10 @@ class MetricsCollector:
         self._cache_misses = 0
         self._false_positives = 0
         self._total_queries = 0
-        self._total_cost_saved = 0.0
         self._total_cost_spent = 0.0
-        self._latencies_cache = []
-        self._latencies_llm = []
-        self._quality_scores = []
+        self._latencies_cache = deque(maxlen=10000)
+        self._latencies_llm = deque(maxlen=10000)
+        self._quality_scores = deque(maxlen=10000)
         self._ab_groups.clear()
         self._domain_stats.clear()
 

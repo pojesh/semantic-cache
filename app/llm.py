@@ -54,8 +54,13 @@ class LLMProvider:
     def __init__(self):
         self.provider = config.llm.provider
         self.cost_tracker = CostTracker()
-        self._client = httpx.Client(timeout=30.0)
+        # Shared async client — reuses connections across requests
+        self._async_client = httpx.AsyncClient(timeout=60.0)
         logger.info(f"LLM provider initialized: {self.provider}")
+
+    async def close(self):
+        """Close the shared HTTP client on shutdown."""
+        await self._async_client.aclose()
 
     async def generate(self, prompt: str, system_prompt: str = "") -> LLMResponse:
         """Generate a response from the LLM."""
@@ -83,13 +88,12 @@ class LLMProvider:
             payload["system"] = system_prompt
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    f"{config.llm.ollama_base_url}/api/generate",
-                    json=payload,
-                )
-                resp.raise_for_status()
-                data = resp.json()
+            resp = await self._async_client.post(
+                f"{config.llm.ollama_base_url}/api/generate",
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
         except Exception as e:
             logger.error(f"Ollama error: {e}")
             raise
@@ -131,17 +135,16 @@ class LLMProvider:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {config.llm.groq_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                )
-                resp.raise_for_status()
-                data = resp.json()
+            resp = await self._async_client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {config.llm.groq_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
         except Exception as e:
             logger.error(f"Groq error: {e}")
             raise
@@ -172,3 +175,4 @@ class LLMProvider:
 
     def get_cost_stats(self) -> dict:
         return self.cost_tracker.to_dict()
+

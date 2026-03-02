@@ -89,7 +89,7 @@ with tab_chat:
                 else:
                     st.info(
                         f"🤖 LLM GENERATED | Latency: {m.get('latency', 0):.1f}ms | "
-                        f"Cost: ${m.get('cost', 0):.6f} | Domain: {m.get('domain', '?')}"
+                        f"Domain: {m.get('domain', '?')}"
                     )
 
     user_input = st.chat_input("Ask anything...")
@@ -105,7 +105,6 @@ with tab_chat:
                 "similarity": resp.get("similarity"),
                 "threshold": resp.get("threshold_used"),
                 "latency": resp.get("latency_ms"),
-                "cost": resp.get("cost_usd"),
                 "domain": resp.get("domain"),
                 "cached_query": resp.get("cached_query"),
                 "ab_group": resp.get("ab_group"),
@@ -165,13 +164,12 @@ with tab_metrics:
     m = stats.get("metrics", {})
 
     st.subheader("📊 Live Metrics")
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Hit Rate", f"{m.get('hit_rate', 0):.1f}%")
     c2.metric("Precision", f"{m.get('precision', 0):.1f}%")
     c3.metric("Queries", m.get("total_queries", 0))
-    c4.metric("💰 Saved", f"${m.get('cost_saved_usd', 0):.4f}")
-    c5.metric("💸 Spent", f"${m.get('cost_spent_usd', 0):.4f}")
-    c6.metric("False Pos.", m.get("false_positives", 0))
+    c4.metric("💸 Spent", f"${m.get('cost_spent_usd', 0):.4f}")
+    c5.metric("False Pos.", m.get("false_positives", 0))
 
     # Latency comparison chart
     st.subheader("⏱ Latency Comparison")
@@ -301,7 +299,7 @@ with tab_ab:
             st.metric("Queries", exp.get("total_queries", 0))
             st.metric("Hit Rate", f"{exp.get('hit_rate_%', 0):.1f}%")
             st.metric("Precision", f"{exp.get('precision_%', 0):.1f}%")
-            st.metric("Cost Saved", f"${exp.get('cost_saved_$', 0):.4f}")
+            st.metric("Cost Spent", f"${exp.get('cost_spent_$', 0):.4f}")
             st.metric("False Positives", exp.get("false_positives", 0))
 
         with col2:
@@ -309,14 +307,14 @@ with tab_ab:
             st.metric("Queries", ctrl.get("total_queries", 0))
             st.metric("Hit Rate", f"{ctrl.get('hit_rate_%', 0):.1f}%")
             st.metric("Precision", f"{ctrl.get('precision_%', 0):.1f}%")
-            st.metric("Cost Saved", f"${ctrl.get('cost_saved_$', 0):.4f}")
+            st.metric("Cost Spent", f"${ctrl.get('cost_spent_$', 0):.4f}")
             st.metric("False Positives", ctrl.get("false_positives", 0))
 
         # Comparison chart
         compare_df = pd.DataFrame({
-            "Metric": ["Hit Rate %", "Precision %", "Cost Saved $"],
-            "Experiment (MAB)": [exp.get("hit_rate_%", 0), exp.get("precision_%", 0), exp.get("cost_saved_$", 0) * 10000],
-            "Control (Static)": [ctrl.get("hit_rate_%", 0), ctrl.get("precision_%", 0), ctrl.get("cost_saved_$", 0) * 10000],
+            "Metric": ["Hit Rate %", "Precision %"],
+            "Experiment (MAB)": [exp.get("hit_rate_%", 0), exp.get("precision_%", 0)],
+            "Control (Static)": [ctrl.get("hit_rate_%", 0), ctrl.get("precision_%", 0)],
         })
         st.bar_chart(compare_df.set_index("Metric"))
     else:

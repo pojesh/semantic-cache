@@ -139,8 +139,8 @@ class VectorCache:
 
     def store(self, query: str, response: str, embedding: np.ndarray, domain: str) -> str:
         """Store a new query-response pair in the cache."""
-        # Use content hash as key to avoid duplicates
-        key_hash = hashlib.md5(query.encode()).hexdigest()[:12]
+        # Use full content hash as key to avoid duplicates
+        key_hash = hashlib.md5(query.encode()).hexdigest()
         cache_key = f"{self.prefix}:{key_hash}"
 
         mapping = {
@@ -159,7 +159,39 @@ class VectorCache:
         self.redis_client.expire(cache_key, ttl)
 
         logger.debug(f"Stored cache entry: key={cache_key}, domain={domain}, ttl={ttl}s")
+
+        # Periodic eviction check (every 100 inserts)
+        self._insert_count = getattr(self, '_insert_count', 0) + 1
+        if self._insert_count % 100 == 0:
+            self._enforce_max_entries()
+
         return cache_key
+
+    def _enforce_max_entries(self):
+        """Evict oldest cache entries when above max_entries limit."""
+        try:
+            keys = self.redis_client.keys(f"{self.prefix}:*")
+            if len(keys) <= config.cache.max_entries:
+                return
+
+            # Collect timestamps for all entries
+            entries = []
+            for key in keys:
+                ts = self.redis_client.hget(key, "timestamp")
+                if ts is not None:
+                    entries.append((key, float(ts)))
+
+            # Sort by timestamp ascending (oldest first)
+            entries.sort(key=lambda x: x[1])
+
+            # Delete oldest entries until we're under the limit
+            num_to_delete = len(entries) - config.cache.max_entries
+            if num_to_delete > 0:
+                keys_to_delete = [e[0] for e in entries[:num_to_delete]]
+                self.redis_client.delete(*keys_to_delete)
+                logger.info(f"Evicted {num_to_delete} oldest cache entries (was {len(entries)}, max={config.cache.max_entries})")
+        except Exception as e:
+            logger.warning(f"Cache eviction check failed: {e}")
 
     def increment_hit(self, cache_key: str):
         """Increment hit count for a cache entry."""

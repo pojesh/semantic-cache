@@ -74,15 +74,91 @@ class DecisionRecord:
 
 
 class EnhancedContextExtractor:
-    """Rich context extraction for better MAB decisions."""
+    """Rich context extraction for better MAB decisions.
+
+    Domain detection uses a hybrid approach:
+    1. Fast keyword matching (high precision, low recall)
+    2. Embedding cosine similarity fallback (high recall for ambiguous queries)
+    """
+
+    # Reference sentences per domain — used for embedding-based classification
+    DOMAIN_REFERENCES = {
+        "code": [
+            "Write a Python function to sort a list",
+            "How to fix a bug in my JavaScript code",
+            "Explain the difference between a class and an interface",
+            "How to set up a REST API with FastAPI",
+            "Debug this SQL query that returns wrong results",
+            "What is the time complexity of quicksort",
+            "How to use Docker to containerize an application",
+            "Implement a binary search tree in Java",
+        ],
+        "math": [
+            "Calculate the integral of x squared",
+            "What is the derivative of sin(x) times cos(x)",
+            "Solve this system of linear equations",
+            "What is the probability of rolling two sixes",
+            "Explain the central limit theorem",
+            "How does backpropagation compute gradients",
+            "Find the eigenvalues of this matrix",
+            "What is the Fourier transform of a Gaussian",
+        ],
+        "factual": [
+            "Who was the first president of the United States",
+            "What is the capital of Japan",
+            "When was the internet invented",
+            "How many planets are in the solar system",
+            "What is the population of India",
+            "Who discovered penicillin",
+            "What year did World War 2 end",
+            "Define the term photosynthesis",
+        ],
+        "creative": [
+            "Write a short story about a robot detective",
+            "Suggest some creative marketing ideas for a startup",
+            "How to cook chicken biryani recipe",
+            "Summarize the plot of Pride and Prejudice",
+            "Compare the advantages of remote vs office work",
+            "Design a workout plan for beginners",
+            "Write a professional email declining a meeting",
+            "Create a meal plan for a week on a budget",
+        ],
+    }
 
     def __init__(self):
         self.domains = config.mab.domains
+        # Lazily computed domain reference embeddings
+        self._domain_embeddings: Optional[Dict[str, np.ndarray]] = None
+
+    def _ensure_domain_embeddings(self, embedding_dim: int):
+        """Compute domain reference embeddings on first use (lazy init)."""
+        if self._domain_embeddings is not None:
+            return
+
+        try:
+            from app.embeddings import EmbeddingService
+            embedder = EmbeddingService()
+
+            self._domain_embeddings = {}
+            for domain, refs in self.DOMAIN_REFERENCES.items():
+                ref_embeds = embedder.encode(refs, normalize=True)
+                # Average the reference embeddings → single centroid per domain
+                centroid = np.mean(ref_embeds, axis=0)
+                # Re-normalize the centroid
+                norm = np.linalg.norm(centroid)
+                if norm > 0:
+                    centroid = centroid / norm
+                self._domain_embeddings[domain] = centroid
+
+            logger.info(f"Domain reference embeddings computed for {list(self._domain_embeddings.keys())}")
+        except Exception as e:
+            logger.warning(f"Failed to compute domain embeddings, keyword-only fallback: {e}")
+            self._domain_embeddings = {}
 
     def extract(self, query: str, embedding: Optional[np.ndarray] = None) -> dict:
         """Returns full context dict."""
         return {
-            "domain": self._detect_domain(query),
+            "domain": self._detect_domain(query, embedding),
             "length_bin": self._length_bin(query),
             "complexity": self._query_complexity(query),
             "specificity": self._query_specificity(query),
@@ -92,7 +168,32 @@ class EnhancedContextExtractor:
         """Backward-compatible: returns (domain, length_bin)."""
         return self._detect_domain(query), self._length_bin(query)
 
-    def _detect_domain(self, query: str) -> str:
+    def _detect_domain(self, query: str, embedding: Optional[np.ndarray] = None) -> str:
+        """Hybrid domain detection: keywords first, then embedding similarity fallback."""
+        # Stage 1: Keyword matching (fast, high precision)
+        keyword_domain = self._keyword_domain(query)
+        if keyword_domain != config.mab.default_domain:
+            return keyword_domain
+
+        # Stage 2: Embedding-based classification (catches ambiguous queries)
+        if embedding is not None:
+            self._ensure_domain_embeddings(embedding.shape[0])
+            if self._domain_embeddings:
+                best_domain = config.mab.default_domain
+                best_sim = 0.0
+                for domain, centroid in self._domain_embeddings.items():
+                    sim = float(np.dot(embedding, centroid))
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_domain = domain
+                # Only use embedding result if similarity is above a meaningful threshold
+                if best_sim >= 0.35:
+                    return best_domain
+
+        return config.mab.default_domain
+
+    def _keyword_domain(self, query: str) -> str:
+        """Original keyword-based domain detection."""
         query_lower = query.lower()
         query_words = set(query_lower.split())
         scores = {}
