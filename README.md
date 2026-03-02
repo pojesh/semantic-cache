@@ -30,7 +30,7 @@ User Query → FastAPI → MPNet Embedding → A/B Router
              (5ms, $0)
                           │
                    MAB Feedback Loop
-                   (sampled 10% via LLM-as-judge)
+                   (LLM-as-judge)
 ```
 
 ## Key Innovations
